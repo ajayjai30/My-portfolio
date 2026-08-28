@@ -1,15 +1,47 @@
 (function() {
+  // Aggressively remove Netlify Drawer / Feedback drawer from DOM
+  const purgeNetlifyDrawer = () => {
+    const selectors = [
+      '#netlify-drawer',
+      'netlify-drawer',
+      '[data-netlify-drawer]',
+      '.netlify-drawer',
+      'div[class*="netlify-drawer"]',
+      'iframe[src*="netlify"]',
+      'iframe[id*="netlify"]',
+      'button[aria-label*="Netlify"]',
+      'div[id*="netlify-feedback"]'
+    ];
+    selectors.forEach(sel => {
+      document.querySelectorAll(sel).forEach(el => {
+        try { el.remove(); } catch(e) { el.style.display = 'none'; }
+      });
+    });
+  };
+  purgeNetlifyDrawer();
+  setInterval(purgeNetlifyDrawer, 200);
+  try {
+    const obs = new MutationObserver(purgeNetlifyDrawer);
+    obs.observe(document.documentElement, { childList: true, subtree: true });
+  } catch(e) {}
+
   const styles = `
     #netlify-drawer,
+    netlify-drawer,
     [data-netlify-drawer],
     .netlify-drawer,
     div[class*="netlify-drawer"],
     iframe[src*="netlify"],
-    iframe[id*="netlify"] {
+    iframe[id*="netlify"],
+    div[id*="netlify-feedback"] {
       display: none !important;
       visibility: hidden !important;
       opacity: 0 !important;
       pointer-events: none !important;
+      width: 0 !important;
+      height: 0 !important;
+      position: absolute !important;
+      left: -9999px !important;
     }
     #kai-widget { 
       position: fixed; 
