@@ -456,9 +456,17 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: text })
       });
-      const data = await res.json();
+
       const typingEl = document.getElementById('kai-typing');
       if (typingEl) typingEl.remove();
+
+      const contentType = res.headers.get('content-type') || '';
+      let data = {};
+      if (contentType.includes('application/json')) {
+        data = await res.json();
+      } else {
+        throw new Error(`HTTP ${res.status} non-JSON response`);
+      }
       
       const botDiv = document.createElement('div');
       botDiv.className = 'msg bot';
@@ -473,7 +481,7 @@
       if (typingEl) typingEl.remove();
       const botDiv = document.createElement('div');
       botDiv.className = 'msg bot';
-      botDiv.textContent = 'Error reaching backend API. Check console.';
+      botDiv.textContent = '⚠️ Backend AI service unreachable. Please ensure OPENROUTER_API_KEY is configured in your Netlify site environment variables.';
       msgs.appendChild(botDiv);
       console.error(err);
     }

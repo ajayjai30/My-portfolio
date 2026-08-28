@@ -19,7 +19,40 @@ Formatting Rules:
 - Never output company names and their roles on separate bullet points.
 - Use clear spacing and bold headers for sections when organizing long replies.`;
 
-async function getAIResponse(message, apiKey) {
+export default async (req, context) => {
+  if (req.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Method Not Allowed' }), {
+      status: 405,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  let body;
+  try {
+    body = await req.json();
+  } catch {
+    return new Response(JSON.stringify({ error: 'Invalid JSON body' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  const { message } = body;
+  if (!message) {
+    return new Response(JSON.stringify({ error: 'Message is required' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey) {
+    return new Response(JSON.stringify({ error: 'OpenRouter API key is missing. Please add OPENROUTER_API_KEY in your Netlify site environment variables.' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
   const models = [
     process.env.OPENROUTER_MODEL || 'google/gemma-4-26b-a4b-it:free',
     'openrouter/free',
@@ -48,108 +81,24 @@ async function getAIResponse(message, apiKey) {
       if (response.ok) {
         const data = await response.json();
         const reply = data.choices?.[0]?.message?.content;
-        if (reply) return { reply };
+        if (reply) {
+          return new Response(JSON.stringify({ reply }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
       }
     } catch (err) {
       console.warn(`Error calling model ${model}:`, err.message);
     }
   }
 
-  return { error: 'All AI model endpoints are currently busy. Please retry in a moment.' };
-}
-
-// Netlify Functions v2 (Standard Request/Response)
-export default async (req, context) => {
-  let method = req?.method || req?.httpMethod;
-  if (method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method Not Allowed' }), {
-      status: 405,
-      headers: { 'Content-Type': 'application/json' }
-    });
-  }
-
-  let bodyData = null;
-  if (typeof req?.json === 'function') {
-    try {
-      bodyData = await req.json();
-    } catch {
-      bodyData = {};
-    }
-  } else if (req?.body) {
-    try {
-      bodyData = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-    } catch {
-      bodyData = {};
-    }
-  }
-
-  const message = bodyData?.message;
-  if (!message) {
-    return new Response(JSON.stringify({ error: 'Message is required' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
-  }
-
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) {
-    return new Response(JSON.stringify({ error: 'Server configuration error: OpenRouter API key missing' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
-  }
-
-  const result = await getAIResponse(message, apiKey);
-  if (result.reply) {
-    return new Response(JSON.stringify({ reply: result.reply }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
-  } else {
-    return new Response(JSON.stringify({ error: result.error }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
-  }
+  return new Response(JSON.stringify({ error: 'All AI model endpoints are currently busy. Please retry in a moment.' }), {
+    status: 500,
+    headers: { 'Content-Type': 'application/json' }
+  });
 };
 
-// Netlify Functions v1 / AWS Lambda Handler Compatibility
-export async function handler(event, context) {
-  if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: 'Method Not Allowed' })
-    };
-  }
-
-  let bodyData = {};
-  try {
-    bodyData = typeof event.body === 'string' ? JSON.parse(event.body || '{}') : (event.body || {});
-  } catch {}
-
-  const message = bodyData?.message;
-  if (!message) {
-    return {
-      statusCode: 400,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: 'Message is required' })
-    };
-  }
-
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) {
-    return {
-      statusCode: 500,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: 'Server configuration error: OpenRouter API key missing' })
-    };
-  }
-
-  const result = await getAIResponse(message, apiKey);
-  return {
-    statusCode: result.reply ? 200 : 500,
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(result)
-  };
-}
+export const config = {
+  path: '/api/chat'
+};
