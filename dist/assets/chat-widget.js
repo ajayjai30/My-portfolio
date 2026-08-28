@@ -1,10 +1,21 @@
 (function() {
   const styles = `
+    #netlify-drawer,
+    [data-netlify-drawer],
+    .netlify-drawer,
+    div[class*="netlify-drawer"],
+    iframe[src*="netlify"],
+    iframe[id*="netlify"] {
+      display: none !important;
+      visibility: hidden !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
     #kai-widget { 
       position: fixed; 
       bottom: 28px; 
       right: 28px; 
-      z-index: 99999; 
+      z-index: 999999; 
       font-family: var(--font-body, 'Inter', sans-serif); 
       display: flex;
       align-items: center;
